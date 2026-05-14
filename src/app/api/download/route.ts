@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to get url" }, { status: 404 });
     }
 
-    const downloadEnabled = process.env.ENABLE_DOWNLOAD === "1";
+    const downloadEnabled = process.env.ENABLE_DOWNLOAD !== "0";
     if (!downloadEnabled) {
       return NextResponse.json(
         { error: "Download disabled", url: playInfo.url },

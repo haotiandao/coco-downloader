@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProvider, getAllProviders } from '@/lib/providers';
+import { getProvider } from '@/lib/providers';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -10,22 +10,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing query' }, { status: 400 });
   }
 
-  let items = [];
-
-  if (providerName && providerName !== 'all') {
-    const provider = getProvider(providerName);
-    items = await provider.search(q);
-  } else {
-    // Search all providers in parallel
-    const providers = getAllProviders();
-    const results = await Promise.all(
-      providers.map(p => p.search(q).catch(err => {
-        console.error(`Provider ${p.name} search error:`, err);
-        return [];
-      }))
-    );
-    items = results.flat();
-  }
+  const resolvedProviderName =
+    providerName && providerName !== 'all' ? providerName : 'jianbin-kugou';
+  const provider = getProvider(resolvedProviderName);
+  const items = await provider.search(q);
 
   return NextResponse.json({ items });
 }

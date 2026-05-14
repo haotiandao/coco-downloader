@@ -50,7 +50,7 @@ type PlayMode = "order" | "shuffle" | "single";
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [provider, setProvider] = useState("all");
+  const [provider, setProvider] = useState("jianbin-kugou");
   const [results, setResults] = useState<MusicItem[]>([]);
   const [loading, setLoading] = useState(false);
   
