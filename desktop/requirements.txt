@@ -3,7 +3,9 @@ PyQt5-Qt5
 PyQt5-sip
 PyQt-Fluent-Widgets[full]
 PyQt5-Frameless-Window
+beautifulsoup4
 nuitka
 ordered-set
+requests
 zstandard
 ruff

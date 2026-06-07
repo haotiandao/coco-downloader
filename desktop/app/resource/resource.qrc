@@ -7,6 +7,30 @@
         <file>images/logo.png</file>
         <file>images/undraw_location-search.svg</file>
 
+        <file>images/song_list_widget/Add_black.svg</file>
+        <file>images/song_list_widget/Add_green_black.svg</file>
+        <file>images/song_list_widget/Add_green_white.svg</file>
+        <file>images/song_list_widget/Add_white.svg</file>
+        <file>images/song_list_widget/CheckMark.png</file>
+        <file>images/song_list_widget/CheckMark_pressed.png</file>
+        <file>images/song_list_widget/Delete_black.svg</file>
+        <file>images/song_list_widget/Delete_green_black.svg</file>
+        <file>images/song_list_widget/Delete_green_white.svg</file>
+        <file>images/song_list_widget/Delete_white.svg</file>
+        <file>images/song_list_widget/Download_black.svg</file>
+        <file>images/song_list_widget/Download_green_black.svg</file>
+        <file>images/song_list_widget/Download_green_white.svg</file>
+        <file>images/song_list_widget/Download_white.svg</file>
+        <file>images/song_list_widget/Info_red.svg</file>
+        <file>images/song_list_widget/Info_white.svg</file>
+        <file>images/song_list_widget/Playing_green_black.svg</file>
+        <file>images/song_list_widget/Playing_green_white.svg</file>
+        <file>images/song_list_widget/Playing_white.svg</file>
+        <file>images/song_list_widget/Play_black.svg</file>
+        <file>images/song_list_widget/Play_green_black.svg</file>
+        <file>images/song_list_widget/Play_green_white.svg</file>
+        <file>images/song_list_widget/Play_white.svg</file>
+
         <file>i18n/app.zh_CN.qm</file>
         <file>i18n/app.zh_HK.qm</file>
 
@@ -16,5 +40,7 @@
         <file>qss/dark/setting_interface.qss</file>
         <file>qss/light/main_window.qss</file>
         <file>qss/dark/main_window.qss</file>
+        <file>qss/light/song_list_widget.qss</file>
+        <file>qss/dark/song_list_widget.qss</file>
     </qresource>
 </RCC>

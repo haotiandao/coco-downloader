@@ -1,0 +1,17 @@
+# coding: utf-8
+from abc import ABC, abstractmethod
+from typing import Any
+
+from app.models.music import MusicItem, PlayInfo
+
+
+class MusicProvider(ABC):
+    name: str
+
+    @abstractmethod
+    def search(self, query: str) -> list[MusicItem]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_play_info(self, song_id: str, extra: dict[str, Any] | None = None) -> PlayInfo:
+        raise NotImplementedError
