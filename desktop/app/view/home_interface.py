@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import QLabel, QWidget, QVBoxLayout
 from qfluentwidgets import InfoBar, InfoBarPosition, ScrollArea, setFont
 
 from ..common.style_sheet import StyleSheet
-from ..components import SearchCard, PlaceholderWidget, SongListWidget, SongInfo
+from ..common.signal_bus import signalBus
+from ..components import NeteaseQualityDialog, PlaceholderWidget, SearchCard, SongInfo, SongListWidget
 from ..models.music import MusicItem
 from ..services.errors import (
     NETWORK_ERROR_HTTP_STATUS,
@@ -18,6 +19,8 @@ from ..services.music_search_service import search_music
 
 PAGE_SIZE = 20
 PAGED_PLATFORMS = {"网易云官方", "QQ音乐官方", "netease-official", "qq-official"}
+DOWNLOAD_ONLY_PLATFORMS = {"QQ音乐(MP3)", "力音", "爱听", "qqmp3", "livepoo", "aiting"}
+NETEASE_OFFICIAL_PLATFORMS = {"网易云官方", "netease-official"}
 
 
 class MusicSearchThread(QThread):
@@ -83,10 +86,12 @@ class HomeInterface(ScrollArea):
         self.currentKeyword = ""
         self.currentPlatform = ""
         self.currentOffset = 0
+        self.currentItems: list[MusicItem] = []
         self.isLoadingMore = False
 
         self._init_widget()
         self._connect_signals()
+        self._sync_preview_hint(self.searchCard.platformComboBox.currentText())
 
     def _init_widget(self):
         self.resize(1000, 800)
@@ -116,6 +121,8 @@ class HomeInterface(ScrollArea):
 
     def _connect_signals(self):
         self.searchCard.searchRequested.connect(self._on_search)
+        self.searchCard.platformChanged.connect(self._sync_preview_hint)
+        signalBus.playbackTrackChanged.connect(self._on_playback_track_changed)
 
     def _on_search(self, keyword: str, platform: str):
         """Handle search request"""
@@ -124,7 +131,9 @@ class HomeInterface(ScrollArea):
         self.currentKeyword = keyword
         self.currentPlatform = platform
         self.currentOffset = 0
+        self.currentItems = []
         self.isLoadingMore = False
+        self._sync_preview_hint(platform)
         self.placeholderWidget.set_content_visible(False)
         self.placeholderWidget.show()
         self.resultTitleLabel.hide()
@@ -171,6 +180,7 @@ class HomeInterface(ScrollArea):
         )
         self.resultTitleLabel.show()
         songs = [self._to_song_info(item) for item in items]
+        self.currentItems = list(items)
         self.placeholderWidget.hide()
         self._set_song_list(songs)
         self.currentOffset = len(items)
@@ -213,6 +223,8 @@ class HomeInterface(ScrollArea):
         if self.songListWidget is None:
             self.songListWidget = SongListWidget(songs, self.scrollWidget)
             self.songListWidget.loadMoreRequested.connect(self._on_load_more)
+            self.songListWidget.songPlayRequested.connect(self._on_song_play_requested)
+            self.songListWidget.songDownloadRequested.connect(self._on_song_download_requested)
             self.vBoxLayout.addWidget(self.songListWidget, 1)
         else:
             self.songListWidget.set_songs(songs)
@@ -237,6 +249,7 @@ class HomeInterface(ScrollArea):
             singer=item.artist,
             album=item.album or self.tr("未知专辑"),
             duration=self._format_duration(item.duration),
+            can_preview=not self._is_download_only_platform(self.currentPlatform),
         )
 
     def _format_duration(self, duration: str | None) -> str:
@@ -286,6 +299,7 @@ class HomeInterface(ScrollArea):
             return
 
         songs = [self._to_song_info(item) for item in items]
+        self.currentItems.extend(items)
         self.songListWidget.append_songs(songs)
         self.currentOffset += len(items)
         self._set_load_more_visible(len(items) == PAGE_SIZE)
@@ -296,6 +310,45 @@ class HomeInterface(ScrollArea):
 
     def _supports_paging(self, platform: str) -> bool:
         return platform in PAGED_PLATFORMS
+
+    def _on_song_play_requested(self, index: int) -> None:
+        if self._is_download_only_platform(self.currentPlatform):
+            return
+        signalBus.playPlaylistRequested.emit(self.currentItems, index)
+
+    def _on_song_download_requested(self, index: int) -> None:
+        if not 0 <= index < len(self.currentItems):
+            return
+
+        item = self.currentItems[index]
+        if self._is_netease_official(item.provider):
+            dialog = NeteaseQualityDialog(self.window())
+            if dialog.exec():
+                signalBus.downloadRequested.emit(item, {"level": dialog.selected_level})
+            return
+
+        signalBus.downloadRequested.emit(item, {})
+
+    def _on_playback_track_changed(self, item: object, index: int) -> None:
+        if self.songListWidget is None:
+            return
+        if not isinstance(item, MusicItem):
+            return
+        if index >= len(self.currentItems):
+            return
+        current_item = self.currentItems[index]
+        if current_item.id != item.id or current_item.provider != item.provider:
+            return
+        self.songListWidget.set_playing_index(index)
+
+    def _sync_preview_hint(self, platform: str) -> None:
+        self.searchCard.set_preview_hint_visible(self._is_download_only_platform(platform))
+
+    def _is_download_only_platform(self, platform: str) -> bool:
+        return platform in DOWNLOAD_ONLY_PLATFORMS
+
+    def _is_netease_official(self, provider: str) -> bool:
+        return provider in NETEASE_OFFICIAL_PLATFORMS
 
     def _show_search_error_info_bar(self, message: str, error_kind: str) -> None:
         parent = self.window()

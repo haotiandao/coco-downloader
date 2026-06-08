@@ -1,19 +1,22 @@
 # coding: utf-8
 from PyQt5.QtCore import Qt, QSize, QEasingCurve, QFile, QTextStream
-from PyQt5.QtGui import QIcon, QColor
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QFrame, QWidget, QLabel
 
 from qfluentwidgets import (NavigationBar, NavigationItemPosition, SplashScreen, isDarkTheme,
-                            PopUpAniStackedWidget)
+                            PopUpAniStackedWidget, InfoBar, InfoBarPosition)
 from qfluentwidgets import FluentIcon as FIF
 from qframelesswindow import FramelessWindow, TitleBar
 
+from ..components import PlayBar
 from .home_interface import HomeInterface
 from .setting_interface import SettingInterface
 from ..common.config import cfg
 from ..common.icon import Icon
 from ..common.signal_bus import signalBus
 from ..common import resource
+from ..services.download_service import DownloadService
+from ..services.playback_service import PlaybackService
 
 
 class StackedWidget(QFrame):
@@ -82,17 +85,6 @@ class CustomTitleBar(TitleBar):
         self.iconLabel.setPixmap(QIcon(icon).pixmap(18, 18))
 
 
-class PlayerBar(QFrame):
-
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self.setFixedHeight(80)
-        self.setObjectName('playerBar')
-
-        self.hBoxLayout = QHBoxLayout(self)
-        self.hBoxLayout.setContentsMargins(20, 10, 20, 10)
-
-
 class MainWindow(FramelessWindow):
 
     def __init__(self):
@@ -104,10 +96,12 @@ class MainWindow(FramelessWindow):
 
         self.navigationBar = NavigationBar(self)
         self.stackedWidget = StackedWidget(self)
-        self.playerBar = PlayerBar(self)
+        self.playerBar = PlayBar(parent=self)
 
         self.homeInterface = HomeInterface(self)
         self.settingInterface = SettingInterface(self)
+        self.playbackService = PlaybackService(self.playerBar, self)
+        self.downloadService = DownloadService(self)
 
         self.initLayout()
         self.initNavigation()
@@ -116,6 +110,9 @@ class MainWindow(FramelessWindow):
 
     def connectSignalToSlot(self):
         signalBus.micaEnableChanged.connect(lambda x: None)
+        signalBus.playbackError.connect(self.showPlaybackError)
+        signalBus.downloadFinished.connect(self.showDownloadFinished)
+        signalBus.downloadFailed.connect(self.showDownloadFailed)
         self.stackedWidget.view.currentChanged.connect(self.onCurrentInterfaceChanged)
         cfg.themeChanged.connect(self.setQss)
 
@@ -156,8 +153,8 @@ class MainWindow(FramelessWindow):
         self.navigationBar.setCurrentItem(self.homeInterface.objectName())
 
     def initWindow(self):
-        self.resize(960, 780)
-        self.setMinimumWidth(760)
+        self.resize(1160, 880)
+        self.setMinimumWidth(1060)
         self.setWindowIcon(QIcon(':/app/images/logo.png'))
         self.setWindowTitle('Coco Downloader')
         self.titleBar.setAttribute(Qt.WA_StyledBackground)
@@ -193,6 +190,39 @@ class MainWindow(FramelessWindow):
     def onCurrentInterfaceChanged(self, index):
         widget = self.stackedWidget.widget(index)
         self.navigationBar.setCurrentItem(widget.objectName())
+
+    def showPlaybackError(self, message: str):
+        InfoBar.error(
+            title=self.tr("播放失败"),
+            content=message or self.tr("无法播放当前歌曲"),
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self,
+        )
+
+    def showDownloadFinished(self, file_path: str):
+        InfoBar.success(
+            title=self.tr("下载完成"),
+            content=file_path,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self,
+        )
+
+    def showDownloadFailed(self, message: str):
+        InfoBar.error(
+            title=self.tr("下载失败"),
+            content=message or self.tr("无法下载当前歌曲"),
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self,
+        )
 
     def setQss(self):
         theme = 'dark' if isDarkTheme() else 'light'

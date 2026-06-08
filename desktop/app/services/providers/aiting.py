@@ -93,7 +93,11 @@ class AitingProvider(MusicProvider):
         play_cover = None
         if isinstance(payload, dict) and isinstance(payload.get("pic"), str):
             play_cover = absolute_url(payload["pic"], f"{BASE_URL}/")
-        return PlayInfo(url=play_url, type=extract_ext(play_url), cover=play_cover or cover)
+        return PlayInfo(
+            url=play_url,
+            type=extract_ext(play_url),
+            cover=play_cover or cover,
+        )
 
     def _bootstrap_cookie(self) -> str:
         try:

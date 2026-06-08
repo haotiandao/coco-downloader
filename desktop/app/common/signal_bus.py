@@ -7,6 +7,12 @@ class SignalBus(QObject):
 
     checkUpdateSig = pyqtSignal()
     micaEnableChanged = pyqtSignal(bool)
+    playPlaylistRequested = pyqtSignal(list, int)
+    playbackError = pyqtSignal(str)
+    playbackTrackChanged = pyqtSignal(object, int)
+    downloadRequested = pyqtSignal(object, object)
+    downloadFinished = pyqtSignal(str)
+    downloadFailed = pyqtSignal(str)
 
 
 signalBus = SignalBus()

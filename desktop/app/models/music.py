@@ -21,3 +21,4 @@ class PlayInfo:
     type: str
     bitrate: str | None = None
     cover: str | None = None
+    headers: dict[str, str] = field(default_factory=dict)

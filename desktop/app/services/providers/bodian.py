@@ -15,6 +15,8 @@ SEARCH_API_URL = "https://bd-api.kuwo.cn/api/search/music/list"
 CGG_API_URL = "https://kw-api.cenguigui.cn/"
 TIANBAO_API_URL = "https://mobi.kuwo.cn/mobi.s"
 REQUEST_TIMEOUT = 20
+DEFAULT_PLAY_LEVEL = "standard"
+DEFAULT_PLAY_BR = "320kmp3"
 
 SEARCH_HEADERS = {
     "user-agent": "Dart/3.3 (dart:io)",
@@ -69,7 +71,7 @@ class BodianProvider(MusicProvider):
             info = self._get_by_cenguigui(song_id)
             return PlayInfo(
                 url=info["url"],
-                type=extract_ext(info["url"], "flac"),
+                type=extract_ext(info["url"], "mp3"),
                 bitrate=info.get("bitrate"),
                 cover=info.get("cover") or fallback_cover,
             )
@@ -77,7 +79,7 @@ class BodianProvider(MusicProvider):
             info = self._get_by_tianbao(song_id)
             return PlayInfo(
                 url=info["url"],
-                type=extract_ext(info["url"], "flac"),
+                type=extract_ext(info["url"], "mp3"),
                 bitrate=info.get("bitrate"),
                 cover=fallback_cover,
             )
@@ -104,7 +106,7 @@ class BodianProvider(MusicProvider):
     def _get_by_cenguigui(self, song_id: str) -> dict[str, str]:
         data = self._http.get_json(
             CGG_API_URL,
-            params={"id": song_id, "type": "song", "level": "lossless", "format": "json"},
+            params={"id": song_id, "type": "song", "level": DEFAULT_PLAY_LEVEL, "format": "json"},
             timeout=REQUEST_TIMEOUT,
         )
         payload = data.get("data", {}) if isinstance(data, dict) else {}
@@ -112,7 +114,7 @@ class BodianProvider(MusicProvider):
         if not is_http_url(url):
             raise ValueError("Invalid cenguigui url")
         cover = payload.get("pic") if isinstance(payload.get("pic"), str) else None
-        return {"url": url, "cover": cover or "", "bitrate": "lossless"}
+        return {"url": url, "cover": cover or "", "bitrate": DEFAULT_PLAY_LEVEL}
 
     def _get_by_tianbao(self, song_id: str) -> dict[str, str]:
         data = self._http.get_json(
@@ -123,7 +125,7 @@ class BodianProvider(MusicProvider):
                 "user": "2333333",
                 "source": "kwplayerhd_ar_4.3.0.8_tianbao_T1A_qirui.apk",
                 "type": "convert_url_with_sign",
-                "br": "2000kflac",
+                "br": DEFAULT_PLAY_BR,
                 "rid": song_id,
             },
             timeout=REQUEST_TIMEOUT,
@@ -132,4 +134,4 @@ class BodianProvider(MusicProvider):
         url = clean_text(str(payload.get("url", ""))) if isinstance(payload, dict) else ""
         if not is_http_url(url):
             raise ValueError("Invalid tianbao url")
-        return {"url": url, "bitrate": "2000kflac"}
+        return {"url": url, "bitrate": DEFAULT_PLAY_BR}

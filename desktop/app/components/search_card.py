@@ -3,13 +3,14 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
-from qfluentwidgets import ComboBox, IndeterminateProgressBar, SearchLineEdit, SimpleCardWidget, setFont
+from qfluentwidgets import CaptionLabel, ComboBox, IndeterminateProgressBar, SearchLineEdit, SimpleCardWidget, setFont
 
 
 class SearchCard(SimpleCardWidget):
     """Search card with search input and platform selector"""
 
     searchRequested = pyqtSignal(str, str)
+    platformChanged = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -26,6 +27,7 @@ class SearchCard(SimpleCardWidget):
         self.searchInput = SearchLineEdit(self)
         self.platformComboBox = ComboBox(self)
         self.progressBar = IndeterminateProgressBar(self)
+        self.previewHintLabel = CaptionLabel(self.tr("当前平台不支持试听，仅支持下载"), self)
 
         self._init_ui()
         self._connect_signals()
@@ -69,6 +71,8 @@ class SearchCard(SimpleCardWidget):
 
         self.progressBar.hide()
         self.progressBar.pause()
+        self.previewHintLabel.hide()
+        self.previewHintLabel.setAlignment(Qt.AlignCenter)
 
         self.vBoxLayout.setContentsMargins(24, 24, 24, 24)
         self.vBoxLayout.setSpacing(12)
@@ -76,10 +80,11 @@ class SearchCard(SimpleCardWidget):
         self.vBoxLayout.addWidget(self.descLabel)
         self.vBoxLayout.addSpacing(8)
         self.vBoxLayout.addLayout(self.searchLayout)
+        self.vBoxLayout.addWidget(self.previewHintLabel)
         self.vBoxLayout.addWidget(self.progressBar)
 
     def _connect_signals(self):
-        pass
+        self.platformComboBox.currentTextChanged.connect(self._on_platform_changed)
 
     def _on_search(self, keyword: str):
         """Handle search action"""
@@ -103,3 +108,10 @@ class SearchCard(SimpleCardWidget):
         """Enable or disable search controls while keeping status widgets active"""
         self.searchInput.setEnabled(enabled)
         self.platformComboBox.setEnabled(enabled)
+
+    def set_preview_hint_visible(self, visible: bool) -> None:
+        """Show unsupported-preview hint below the search box"""
+        self.previewHintLabel.setVisible(visible)
+
+    def _on_platform_changed(self, platform: str) -> None:
+        self.platformChanged.emit(platform)

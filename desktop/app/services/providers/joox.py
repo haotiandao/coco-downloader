@@ -14,6 +14,7 @@ from .utils import extract_ext
 LOGGER = logging.getLogger(__name__)
 BASE_URL = "https://music.wjhe.top"
 REQUEST_TIMEOUT = 20
+PLAYBACK_FORMAT_PRIORITY = ("mp3", "m4a", "aac")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
@@ -48,6 +49,24 @@ def _pick_best_file_link(file_links: list[dict[str, Any]]) -> dict[str, Any] | N
     if not candidates:
         return None
     return sorted(candidates, key=lambda item: float(item.get("quality") or 0), reverse=True)[0]
+
+
+def _pick_default_file_link(file_links: list[dict[str, Any]]) -> dict[str, Any] | None:
+    candidates = [
+        item for item in file_links
+        if isinstance(item, dict) and item.get("quality") is not None and item.get("format")
+    ]
+    if not candidates:
+        return None
+
+    for file_format in PLAYBACK_FORMAT_PRIORITY:
+        format_items = [
+            item for item in candidates
+            if str(item.get("format") or "").lower() == file_format
+        ]
+        if format_items:
+            return sorted(format_items, key=lambda item: float(item.get("quality") or 0), reverse=True)[0]
+    return _pick_best_file_link(file_links)
 
 
 def _build_quality_options(file_links: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -128,7 +147,7 @@ class JooxProvider(MusicProvider):
         if not title:
             return None
 
-        best_link = _pick_best_file_link(file_links)
+        best_link = _pick_default_file_link(file_links)
         artists = self._join_artist_names(item.get("singers", []))
         album = item.get("album", {})
         return MusicItem(
@@ -160,7 +179,7 @@ class JooxProvider(MusicProvider):
                 continue
             if str(item.get("quality") or "") == selected_quality and str(item.get("format") or "") == selected_format:
                 return item
-        return _pick_best_file_link(file_links)
+        return _pick_default_file_link(file_links)
 
     def _resolve_url(self, song_id: str, quality: str, file_format: str, timeout: int) -> str:
         return self._http.head_final_url(

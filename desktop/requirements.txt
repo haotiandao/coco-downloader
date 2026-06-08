@@ -10,3 +10,4 @@ ordered-set
 requests
 zstandard
 ruff
+colorthief==0.2.1

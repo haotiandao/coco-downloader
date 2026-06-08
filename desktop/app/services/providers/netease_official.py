@@ -15,11 +15,33 @@ from app.models.music import MusicItem, PlayInfo
 
 from .base import MusicProvider
 from .http_client import ProviderHttpClient
+from .utils import clean_text, extract_ext, is_http_url
 
 LOGGER = logging.getLogger(__name__)
 REQUEST_TIMEOUT = 15
 API_DOMAIN = "https://interface.music.163.com"
+CENGUIGUI_PLAY_API_URL = "https://api-v2.cenguigui.cn/api/netease/music_v1.php"
+METING_API_URL = "https://api.qijieya.cn/meting/"
 EAPI_KEY = b"e82ckenh8dichen8"
+DEFAULT_LEVEL = "lossless"
+VALID_LEVELS = {
+    "standard",
+    "exhigh",
+    "lossless",
+    "hires",
+    "jyeffect",
+    "sky",
+    "jymaster",
+}
+METING_BR_BY_LEVEL = {
+    "standard": "128",
+    "exhigh": "320",
+    "lossless": "2000",
+    "hires": "2000",
+    "jyeffect": "2000",
+    "sky": "2000",
+    "jymaster": "2000",
+}
 DEFAULT_UA = (
     "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Safari/537.36 Chrome/91.0.4472.164 "
@@ -57,6 +79,11 @@ def _join_artists(items: Any) -> str:
         if isinstance(item, dict) and item.get("name"):
             names.append(str(item["name"]))
     return ", ".join(names)
+
+
+def _normalize_level(value: Any) -> str:
+    level = str(value or DEFAULT_LEVEL).strip().lower()
+    return level if level in VALID_LEVELS else DEFAULT_LEVEL
 
 
 def _eapi_encrypt(uri: str, payload: dict[str, Any]) -> str:
@@ -105,7 +132,21 @@ class NeteaseOfficialProvider(MusicProvider):
         return [item for item in (self._map_item(song) for song in songs) if item]
 
     def get_play_info(self, song_id: str, extra: dict[str, Any] | None = None) -> PlayInfo:
-        raise NotImplementedError("Netease official provider only supports search now")
+        level = _normalize_level(extra.get("level") if extra else None)
+        fallback_cover = extra.get("cover") if extra and isinstance(extra.get("cover"), str) else None
+
+        try:
+            info = self._get_by_cenguigui(song_id, level)
+        except (RequestException, ValueError, json.JSONDecodeError):
+            LOGGER.exception("Netease cenguigui play url error")
+            info = self._get_by_meting(song_id, level)
+
+        return PlayInfo(
+            url=info["url"],
+            type=extract_ext(info["url"]),
+            bitrate=info.get("bitrate"),
+            cover=info.get("cover") or fallback_cover,
+        )
 
     def _make_request(self, uri: str, data: dict[str, Any]) -> Any:
         url = f"{API_DOMAIN}/eapi{uri[4:]}"
@@ -136,6 +177,54 @@ class NeteaseOfficialProvider(MusicProvider):
         alphabet = string.ascii_lowercase + string.digits
         return "".join(random.choice(alphabet) for _ in range(32))
 
+    def _get_by_cenguigui(self, song_id: str, level: str) -> dict[str, str]:
+        data = self._http.get_json(
+            CENGUIGUI_PLAY_API_URL,
+            params={"id": song_id, "type": "json", "level": level},
+            timeout=REQUEST_TIMEOUT,
+        )
+        if not isinstance(data, dict) or data.get("code") != 200:
+            raise ValueError("Cenguigui parse failed")
+
+        payload = data.get("data", {})
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid cenguigui payload")
+
+        url = clean_text(str(payload.get("url", "")))
+        if not is_http_url(url):
+            raise ValueError("Invalid cenguigui url")
+
+        cover = payload.get("pic") if isinstance(payload.get("pic"), str) else ""
+        bitrate = payload.get("format") if isinstance(payload.get("format"), str) else level
+        return {"url": url, "cover": cover, "bitrate": bitrate}
+
+    def _get_by_meting(self, song_id: str, level: str) -> dict[str, str]:
+        br = METING_BR_BY_LEVEL.get(level, "320")
+        response = self._http.get_response(
+            METING_API_URL,
+            params={"server": "netease", "type": "url", "id": song_id, "br": br},
+            timeout=REQUEST_TIMEOUT,
+        )
+        url = self._extract_meting_url(response.text)
+        if not is_http_url(url):
+            raise ValueError("Invalid meting url")
+        return {"url": url, "bitrate": br}
+
+    def _extract_meting_url(self, response_text: str) -> str:
+        raw_text = response_text.strip()
+        if is_http_url(raw_text):
+            return raw_text
+
+        payload = json.loads(raw_text)
+        if isinstance(payload, list) and payload:
+            first_item = payload[0]
+            if isinstance(first_item, dict):
+                return clean_text(str(first_item.get("url", "")))
+        if isinstance(payload, dict):
+            value = payload.get("url") or payload.get("data")
+            return clean_text(str(value or ""))
+        return ""
+
     def _map_item(self, song: Any) -> MusicItem | None:
         if not isinstance(song, dict):
             return None
@@ -157,4 +246,5 @@ class NeteaseOfficialProvider(MusicProvider):
             cover=str(cover) if cover else None,
             duration=_format_duration(duration),
             provider=self.name,
+            extra={"cover": str(cover) if cover else None},
         )

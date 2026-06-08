@@ -97,7 +97,11 @@ class LivepooProvider(MusicProvider):
         )
         if not is_http_url(url):
             raise ValueError("Invalid play url")
-        return PlayInfo(url=url, type=extract_ext(url), cover=cover or None)
+        return PlayInfo(
+            url=url,
+            type=extract_ext(url),
+            cover=cover or None,
+        )
 
     def _parse_search_html(self, html: str) -> list[MusicItem]:
         soup = BeautifulSoup(html, "html.parser")

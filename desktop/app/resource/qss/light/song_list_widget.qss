@@ -33,6 +33,18 @@ QWidget[state='notSelected-pressed'] {
     background-color: rgb(174, 174, 174);
 }
 
+QWidget[state='play-leave'] {
+    background-color: rgb(0, 153, 188);
+}
+
+QWidget[state='play-enter'] {
+    background-color: rgb(0, 107, 131);
+}
+
+QWidget[state='play-pressed'] {
+    background-color: rgb(0, 86, 105);
+}
+
 QWidget[state='selected-leave'] {
     background-color: rgb(0, 153, 188);
 }
@@ -61,7 +73,7 @@ QLabel[state='notSelected-notPlay'] {
 }
 
 QLabel[state='notSelected-play'] {
-    color: rgb(0, 107, 131);
+    color: white;
 }
 
 QLabel[state='selected'] {
@@ -97,11 +109,11 @@ QCheckBox::indicator[state='notSelected-notPlay']:pressed {
 }
 
 QCheckBox::indicator[state='notSelected-play'] {
-    border: 1px solid rgb(0, 107, 131);
+    border: 1px solid white;
 }
 
 QCheckBox::indicator[state='notSelected-play']:pressed {
-    border: 1px solid rgb(130, 172, 182);
+    border: 1px solid rgb(102, 166, 181);
 }
 
 QCheckBox::indicator:checked {
@@ -127,6 +139,17 @@ QToolButton[state='notSelected-play']:hover {
 QToolButton[state='notSelected-notPlay']:pressed,
 QToolButton[state='notSelected-play']:pressed {
     background-color: rgb(174, 174, 174);
+}
+
+QWidget[state='play-leave'] QToolButton[state='notSelected-play']:hover,
+QWidget[state='play-enter'] QToolButton[state='notSelected-play']:hover {
+    background-color: rgb(0, 97, 118);
+}
+
+QWidget[state='play-leave'] QToolButton[state='notSelected-play']:pressed,
+QWidget[state='play-enter'] QToolButton[state='notSelected-play']:pressed,
+QWidget[state='play-pressed'] QToolButton[state='notSelected-play']:pressed {
+    background-color: rgb(0, 86, 105);
 }
 
 QToolButton[state='selected']:hover {
