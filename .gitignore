@@ -63,3 +63,13 @@ desktop/PyQt-Fluent-Widgets/
 desktop/Fluent-M3U8/
 desktop/Groove/
 desktop/PYTHON_STYLE_GUIDE.md
+
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+
+!.env.example
